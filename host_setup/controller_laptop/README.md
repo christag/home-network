@@ -34,5 +34,5 @@ This folder contains resources to fully automate the installation and configurat
 
 - Ensure all referenced files are present and paths are correct on your installer media.
 - The Ansible playbooks and inventory should be maintained in the referenced repository.
-- The vault password endpoint (`https://vault.internal/homelab/vault-pass`) must be accessible from the target machine during setup.
+- The vault password endpoint (`https://vault.christagliaferro.com/vault-pass`) must be accessible from the target machine during setup.
 - You may need to adjust variables and secrets in your Ansible configuration for your environment.

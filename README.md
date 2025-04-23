@@ -12,7 +12,7 @@ Like a geocities homepage in the mid 90s, this project is still currently under 
 | Planning | ✅ Complete |
 | Storage/NFS Setup | ✅ Complete |
 | Ansible Playbook Creation | 🚧 In Progress |
-| Physical Host Setup/K3s Install | ⭕ To Do | 
+| Physical Host Setup/K3s Install | 🚧 In Progress | 
 | Networking and Reverse Proxy Setup | ⭕ To Do |
 | LDAP and SSO Rollout + Migration | ⭕ To Do |
 | Observability Stack and KPI Dashboards | ⭕ To Do |
@@ -38,12 +38,9 @@ Home labs often grow organically, leading to a mix of machines, ad-hoc Docker co
   - `controller_laptop/`: Automated Debian install for the k3s controller node (preseed, ISOLINUX config, instructions)
 - **ansible/**: All Ansible automation for post-install configuration
   - `playbooks/`: Playbooks for k3s controller and agent setup
-  - `group_vars/`, `host_vars/`: Per-group and per-host configuration (including secrets via Ansible Vault)
   - `inventory/`: Ansible inventory files
+  - `inventory/group_vars/`, `inventory/host_vars/`: Per-group and per-host configuration (including secrets via Ansible Vault)
   - `ansible.cfg`: Ansible configuration
-- **setup.sh**: Example manual setup script for a GPU-enabled agent node (for reference or adaptation)
-- **project.md** (not included in repo): Original project plan and rationale
-- **adjustment.md** (not included in repo): Rationale for moving the controller role off the NAS
 
 ## Unique Features & Rationale
 
