@@ -12,7 +12,7 @@ Like a geocities homepage in the mid 90s, this project is still currently under 
 | Planning | ✅ Complete |
 | Storage/NFS Setup | ✅ Complete |
 | Ansible Playbook Creation | 🚧 In Progress |
-| Physical Host Setup/K3s Install | ⭕ To Do | 
+| Physical Host Setup/K3s Install | 🚧 In Progress | 
 | Networking and Reverse Proxy Setup | ⭕ To Do |
 | LDAP and SSO Rollout + Migration | ⭕ To Do |
 | Observability Stack and KPI Dashboards | ⭕ To Do |
