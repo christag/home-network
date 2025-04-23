@@ -22,6 +22,7 @@ This folder contains resources to fully automate the installation and configurat
       - `<path-to-original-debian-iso>`: Path to the official Debian ISO you want to patch.
       - `<output-iso-name>`: Name for the new, patched ISO file.
     - The script will:
+      - Install required utilities (add `-y` or `--no-confirm` to bypass install confirmation.)
       - Extract the original ISO
       - Copy in the `preseed/` folder and update `isolinux/isolinux.cfg`
       - Rebuild the ISO as specified by the output name
