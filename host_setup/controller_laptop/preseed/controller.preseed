@@ -1,0 +1,38 @@
+### Localization
+d-i debian-installer/locale string en_US.UTF-8
+d-i console-setup/ask_detect boolean false
+d-i keyboard-configuration/xkb-keymap select us
+
+### Network (DHCP fallback)
+d-i netcfg/disable_dhcp boolean false
+
+### Mirror & packages
+d-i mirror/country string manual
+d-i mirror/http/hostname string deb.debian.org
+tasksel tasksel/first multiselect standard, ssh-server
+d-i pkgsel/include string git ansible nfs-common ufw network-manager
+
+### Disk (LVM, no swap)
+d-i partman-auto/method string lvm
+d-i partman-auto/expert_recipe string                         \
+  root :: 1 1 100% ext4                             \
+    $primary{ } $bootable{ } method{ format } format{ } \
+    use_filesystem{ } filesystem{ ext4 } mountpoint{ / }
+d-i partman-swapfile/size string 0
+d-i partman/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+
+### Users
+d-i passwd/root-login boolean false
+d-i passwd/user-fullname string Docker Controller
+d-i passwd/username string docker
+d-i passwd/user-uid string 1004
+d-i passwd/user-password-crypted password $6$QwaUvH7Q06s3MDDW$RAsEmYo7giqbcuJnLfe/H2TMsj3zs8ZD/xc5wf1LaQ9qSVf2MDUTCRSgFNDThbBkyg6gl7JvN2d4vS2A.K.nV.
+
+### Late-command: install ansible-pull and fetch vault pass
+d-i preseed/late_command string \
+  in-target sh -c "cat >/etc/systemd/system/ansible-pull.service <<'EOF'\n[Unit]\nDescription=Pull and apply homelab playbook\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nEnvironment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass\nExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git \\n -i ansible/inventory/hosts.ini ansible/playbooks/debian_linux.yml ansible/playbooks/msi_laptop.yml ansible/playbooks/k3s_controller.yml\n\n[Install]\nWantedBy=multi-user.target\nEOF" && \
+  in-target sh -c "wget -qO /root/.vault-pass https://vault.christagliaferro.com/vaultpass && chmod 600 /root/.vault-pass" && \
+  in-target systemctl daemon-reload && in-target systemctl enable ansible-pull.service

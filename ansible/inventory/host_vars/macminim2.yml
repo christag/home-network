@@ -1,0 +1,5 @@
+eth_ip: "{{ ip_first_3_octets }}.23"
+wifi_ip: "{{ ip_first_3_octets }}.33"
+ansible_host: "{{ host_ip }}"
+k3s_role: worker
+gpu_class: high

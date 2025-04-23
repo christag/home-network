@@ -1,0 +1,2 @@
+ansible/inventory/*.vault.yml
+ansible/.vault-pass

@@ -1,0 +1,68 @@
+- name: Bootstrap MSI GS63VR 7RG (Debian 12)
+  hosts: k3s_controller
+  become: yes
+  vars_files:
+    - "{{ playbook_dir }}/../inventory/group_vars/all.yml"
+    - "{{ playbook_dir }}/../inventory/group_vars/all.vault.yml"
+    - "{{ playbook_dir }}/../inventory/host_vars/msi_laptop.yml"
+
+  handlers:
+    - name: restart systemd-logind
+      ansible.builtin.systemd:
+        name: systemd-logind
+        state: restarted
+
+  tasks:
+
+    - name: Install NVIDIA kernel driver & firmware
+      ansible.builtin.apt:
+        name:
+          - nvidia-driver           # 550.xx on Debian 12
+          - firmware-misc-nonfree
+        state: present
+        update_cache: yes
+      tags: nvidia
+
+    - name: Enable nvidia-persistenced
+      ansible.builtin.systemd:
+        name: nvidia-persistenced
+        enabled: yes
+        state: started
+      tags: nvidia
+
+    - name: Add NVIDIA container-toolkit GPG key
+      ansible.builtin.get_url:
+        url: https://nvidia.github.io/libnvidia-container/gpgkey
+        dest: /usr/share/keyrings/nvidia-container-toolkit.gpg
+        mode: "0644"
+      tags: nvidia
+
+    - name: Add NVIDIA container-toolkit apt repo
+      ansible.builtin.shell: |
+        distribution=$(. /etc/os-release; echo $ID$VERSION_ID)
+        curl -s -L https://nvidia.github.io/libnvidia-container/$distribution/libnvidia-container.list \
+        | sed 's#deb #deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit.gpg] #' \
+        > /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      args:
+        creates: /etc/apt/sources.list.d/nvidia-container-toolkit.list
+      tags: nvidia
+
+    - name: Install nvidia-container-toolkit
+      ansible.builtin.apt:
+        name: nvidia-container-toolkit
+        state: present
+        update_cache: yes
+      tags: nvidia
+
+    - name: Configure NVIDIA runtime for Docker
+      ansible.builtin.command: nvidia-ctk runtime configure --runtime docker
+      notify: restart docker
+      tags: nvidia
+
+    - name: Ignore laptop lid-close
+      ansible.builtin.lineinfile:
+        path: /etc/systemd/logind.conf
+        regexp: '^#?HandleLidSwitch='
+        line: 'HandleLidSwitch=ignore'
+      notify: restart systemd-logind
+      tags: power

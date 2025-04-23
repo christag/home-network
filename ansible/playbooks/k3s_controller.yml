@@ -1,0 +1,129 @@
+# playbooks/k3s_controller.yml
+- name: Configure k3s controller node
+  hosts: k3s_controller
+  become: yes
+  vars_files:
+    - "{{ playbook_dir }}/../inventory/group_vars/all.yml"
+    - "{{ playbook_dir }}/../inventory/group_vars/all.vault.yml"
+    - "{{ playbook_dir }}/../inventory/host_vars/controller.yml"
+
+  tasks:
+    - name: Disable swap (Kubernetes requirement)
+      ansible.builtin.shell: |
+        swapoff -a
+        sed -i.bak '/ swap / s/^/#/' /etc/fstab
+      args:
+        warn: false
+      register: swapoff
+      changed_when: swapoff.rc == 0
+      tags: swap
+
+    - name: Install k3s & networking dependencies
+      ansible.builtin.apt:
+        name:
+          - curl
+          - gnupg2
+          - lsb-release
+          - nfs-common
+          - ufw
+        state: present
+        update_cache: yes
+      tags: deps
+
+    - name: Enable UFW and allow SSH
+      community.general.ufw:
+        state: enabled
+        rule: allow
+        port: 22
+      tags: firewall
+
+    - name: Allow Kubernetes control-plane ports
+      community.general.ufw:
+        rule: allow
+        port: "{{ item.port }}"
+        proto: "{{ item.proto }}"
+      loop:
+        - { port: 6443, proto: tcp }
+        - { port: 2379, proto: tcp }
+        - { port: 2380, proto: tcp }
+        - { port: 10250, proto: tcp }
+        - { port: 8472, proto: udp }
+      tags: firewall
+
+    - name: Create NFS mount directory
+      ansible.builtin.file:
+        path: "{{ nfs_mount }}"
+        state: directory
+      tags: nfs
+
+    - name: Mount & persist NFS share
+      ansible.posix.mount:
+        path: "{{ nfs_mount }}"
+        src: "{{ nfs_export }}"
+        fstype: nfs
+        opts: rw,relatime,rsize=1048576,wsize=1048576,_netdev,nofail,x-systemd.automount
+        state: mounted
+      tags: nfs
+
+    - name: Install k3s server
+      ansible.builtin.shell: |
+        curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION={{ k3s_version }} sh -s - \
+          --write-kubeconfig-mode 644 \
+          --node-ip {{ hostvars[inventory_hostname].eth_ip }} \
+          --token {{ k3s_token }} \
+          --disable servicelb,traefik,local-storage \
+          --etcd-snapshot-schedule-cron "0 */6 * * *" \
+          --etcd-snapshot-retention 10
+      args:
+        creates: /etc/systemd/system/k3s.service
+      tags: k3s
+
+    - name: Enable & start k3s
+      ansible.builtin.systemd:
+        name: k3s
+        enabled: yes
+        state: started
+      tags: k3s
+
+    - name: Schedule daily etcd snapshot → NAS
+      ansible.builtin.cron:
+        name: "Copy etcd snapshot to NAS"
+        user: root
+        hour: "3"
+        job: "/usr/local/bin/k3s etcd-snapshot save --name scheduled && cp /var/lib/rancher/k3s/server/db/snapshots/* $(ls -td /var/lib/rancher/k3s/server/db/snapshots | head -1) {{ nfs_mount }}/etcd-backups/ || true"
+      tags: backup
+
+    - name: Deploy NVIDIA device-plugin DaemonSet (cluster-wide GPU support)
+      ansible.builtin.shell: |
+        cat <<'EOF' | kubectl apply -f -
+        apiVersion: v1
+        kind: Namespace
+        metadata: { name: gpu-operator }
+        ---
+        apiVersion: apps/v1
+        kind: DaemonSet
+        metadata: { name: nvidia-device-plugin-daemonset, namespace: gpu-operator }
+        spec:
+          selector: { matchLabels: { name: nvidia-device-plugin-ds } }
+          template:
+            metadata: { labels: { name: nvidia-device-plugin-ds } }
+            spec:
+              tolerations: [{ key: "CriticalAddonsOnly", operator: "Exists" }]
+              containers:
+              - image: nvidia/k8s-device-plugin:1.0.0
+                name: nvidia-device-plugin-ctr
+                args: ["--fail-on-init-error=false"]
+        EOF
+      args:
+        executable: /bin/bash
+      run_once: true
+      delegate_to: "{{ groups['k3s_controller'][0] }}"
+      tags: gpu
+
+    - name: Verify API server reachable
+      ansible.builtin.command: kubectl get nodes
+      register: kubectl_nodes
+      retries: 6
+      delay: 10
+      until: kubectl_nodes.rc == 0
+      tags: verify

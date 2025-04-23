@@ -1,0 +1,93 @@
+- name: Common baseline for every Debian host
+  hosts: all                      # applies to every inventory entry
+  become: yes
+  vars_files:
+    - "{{ playbook_dir }}/../inventory/group_vars/all.yml"
+    - "{{ playbook_dir }}/../inventory/group_vars/all.vault.yml"
+
+  handlers:
+    - name: restart docker
+      ansible.builtin.systemd:
+        name: docker
+        state: restarted
+
+  tasks:
+    - name: Dist-upgrade OS
+      ansible.builtin.apt:
+        upgrade: dist
+        update_cache: yes
+      tags: upgrade
+
+    - name: Install base tool-chain
+      ansible.builtin.apt:
+        name:
+          - build-essential
+          - curl
+          - git
+          - vim
+          - tmux
+          - htop
+          - nfs-common
+          - sudo
+          - bash-completion
+        state: present
+        update_cache: yes
+      tags: base
+
+    - name: Install Docker engine
+      ansible.builtin.apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+      tags: docker
+
+    - name: Enable & start Docker
+      ansible.builtin.systemd:
+        name: docker
+        enabled: yes
+        state: started
+      tags: docker
+
+    - name: Ensure admin user exists
+      ansible.builtin.user:
+        name: docker
+        shell: /bin/bash
+        comment: "Homelab administrator"
+        groups: sudo,docker
+        append: yes
+        password: "{{ '$6$QwaUvH7Q06s3MDDW$RAsEmYo7giqbcuJnLfe/H2TMsj3zs8ZD/xc5wf1LaQ9qSVf2MDUTCRSgFNDThbBkyg6gl7JvN2d4vS2A.K.nV.' | password_hash('sha512') }}"
+      tags: users
+
+    - name: Set hostname (per-host var `desired_hostname`)
+      ansible.builtin.hostname:
+        name: "{{ desired_hostname | default(inventory_hostname) }}"
+      tags: hostname
+
+    - name: Configure static Ethernet
+      community.general.nmcli:
+        conn_name: home-ethernet
+        ifname: "{{ ansible_default_ipv4.interface }}"
+        type: ethernet
+        ip4: "{{ eth_ip }}/24"
+        gw4: "{{ gateway_ip }}"
+        dns4: "{{ dns_ip }}"
+        autoconnect: yes
+        state: present
+
+    - name: Configure static Wi-Fi
+      community.general.nmcli:
+        conn_name: home-wifi
+        ifname: wlan0
+        type: wifi
+        ssid: "{{ wifi_ssid }}"
+        wifi_psk: "{{ wifi_psk }}"
+        ip4: "{{ wifi_ip }}/24"
+        gw4: "{{ gateway_ip }}"
+        dns4: "{{ dns_ip }}"
+        autoconnect: yes
+        state: present
+      when:
+        - wifi_ssid is defined
+        - wifi_psk  is defined
+        - wifi_ip   is defined
+      tags: network

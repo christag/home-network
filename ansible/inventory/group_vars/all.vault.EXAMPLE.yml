@@ -1,0 +1,5 @@
+wifi_ssid: "wifi_ssid"
+wifi_psk: "wifi_psk"
+k3s_token: "base64_encoded_string"
+ip_first_3_octets: "192.168.1"
+domain: "mylab.com"
