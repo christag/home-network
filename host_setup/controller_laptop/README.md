@@ -11,10 +11,6 @@ This folder contains resources to fully automate the installation and configurat
 - **isolinux/isolinux.cfg**  
   Bootloader configuration for the Debian installer. Adds a menu entry for automated install using the provided preseed file.
 
-Here’s a rewritten version of the steps, formatted in the tone and tense of a `README.md` to describe what the script customizes on a machine:
-
----
-
 ## What This Script Configures
 
 This script automates the customization and setup of a Debian-based machine, preparing it as a Kubernetes (k3s) controller node with GPU support and essential system tools. Below is a breakdown of what it configures:
@@ -79,8 +75,6 @@ This script automates the customization and setup of a Debian-based machine, pre
 ### 11. Verification
 
 - Validates that the Kubernetes API server is reachable and operational after setup.
-
----
 
 ## Setup Instructions
 
