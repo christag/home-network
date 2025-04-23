@@ -38,12 +38,9 @@ Home labs often grow organically, leading to a mix of machines, ad-hoc Docker co
   - `controller_laptop/`: Automated Debian install for the k3s controller node (preseed, ISOLINUX config, instructions)
 - **ansible/**: All Ansible automation for post-install configuration
   - `playbooks/`: Playbooks for k3s controller and agent setup
-  - `group_vars/`, `host_vars/`: Per-group and per-host configuration (including secrets via Ansible Vault)
   - `inventory/`: Ansible inventory files
+  - `inventory/group_vars/`, `inventory/host_vars/`: Per-group and per-host configuration (including secrets via Ansible Vault)
   - `ansible.cfg`: Ansible configuration
-- **setup.sh**: Example manual setup script for a GPU-enabled agent node (for reference or adaptation)
-- **project.md** (not included in repo): Original project plan and rationale
-- **adjustment.md** (not included in repo): Rationale for moving the controller role off the NAS
 
 ## Unique Features & Rationale
 
