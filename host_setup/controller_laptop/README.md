@@ -11,6 +11,77 @@ This folder contains resources to fully automate the installation and configurat
 - **isolinux/isolinux.cfg**  
   Bootloader configuration for the Debian installer. Adds a menu entry for automated install using the provided preseed file.
 
+Here’s a rewritten version of the steps, formatted in the tone and tense of a `README.md` to describe what the script customizes on a machine:
+
+---
+
+## What This Script Configures
+
+This script automates the customization and setup of a Debian-based machine, preparing it as a Kubernetes (k3s) controller node with GPU support and essential system tools. Below is a breakdown of what it configures:
+
+### 1. OS and User Setup
+
+- Automates the Debian installation using a preseed file and Ansible.
+- Partitions the disk using LVM with no swap.
+- Creates a user named `docker` (UID 1004) with membership in the `sudo` and `docker` groups.
+- Sets the system hostname based on Ansible inventory variables.
+
+### 2. System Updates and Base Packages
+
+- Performs a full system `dist-upgrade`.
+- Installs essential packages: `build-essential`, `curl`, `git`, `vim`, `tmux`, `htop`, `nfs-common`, `sudo`, and `bash-completion`.
+
+### 3. Networking Configuration
+
+- Configures static IP addresses for Ethernet and (optionally) Wi-Fi using NetworkManager.
+- Applies DNS, gateway, and IP settings from inventory and group variables.
+
+### 4. Docker and NVIDIA GPU Support
+
+- Installs Docker and enables the Docker service at boot.
+- Installs the appropriate NVIDIA drivers and firmware for the system’s GPU.
+- Installs the NVIDIA Container Toolkit and configures Docker to use the NVIDIA runtime.
+- Enables the `nvidia-persistenced` service to manage GPU state between reboots.
+
+### 5. Power Management
+
+- Configures the system to ignore the laptop lid-close event, allowing it to continue running with the lid closed.
+
+### 6. Firewall and Security
+
+- Installs and enables UFW (Uncomplicated Firewall).
+- Allows traffic for SSH and Kubernetes control-plane ports through the firewall.
+
+### 7. Kubernetes (k3s) Controller Setup
+
+- Disables swap, as required by Kubernetes.
+- Installs `k3s` in server mode with custom options:
+  - Sets the node IP address.
+  - Disables unused default services.
+  - Configures automatic etcd snapshots and retention policy.
+- Enables and starts the `k3s` service.
+- Installs required networking dependencies for `k3s`.
+
+### 8. NFS and Backup Integration
+
+- Mounts an NFS share for persistent storage.
+- Schedules a daily cron job to copy etcd snapshots to the NAS over NFS.
+
+### 9. GPU Support in Kubernetes
+
+- Deploys the NVIDIA Device Plugin DaemonSet for enabling GPU access across the Kubernetes cluster.
+
+### 10. Post-Install Automation
+
+- Sets up a `systemd` service to run `ansible-pull` at boot, ensuring that all playbooks are applied automatically.
+- Retrieves the Ansible Vault password securely from a protected endpoint to manage secrets.
+
+### 11. Verification
+
+- Validates that the Kubernetes API server is reachable and operational after setup.
+
+---
+
 ## Setup Instructions
 
 1. **Patch the Debian Installer ISO:**
