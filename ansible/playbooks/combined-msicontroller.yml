@@ -1,8 +1,8 @@
 # ───────────────────────── Common baseline ──────────────────────────
-- import_playbook: ansible/playbooks/debian_linux.yml   # <- targets group [debian] or all
+- import_playbook: debian_linux.yml   # <- targets group [debian] or all
 
 # ───────────────────────── Laptop-specific ──────────────────────────
-- import_playbook: ansible/playbooks/msi_laptop.yml     # <- hosts: msi_laptop
+- import_playbook: msi_laptop.yml     # <- hosts: msi_laptop
 
 # ───────────────────────── K3s Controller ───────────────────────────
-- import_playbook: ansible/playbooks/k3s_controller.yml # <- hosts: k3s_controller
+- import_playbook: k3s_controller.yml # <- hosts: k3s_controller
