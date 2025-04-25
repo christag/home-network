@@ -4,25 +4,67 @@ d-i console-setup/ask_detect boolean false
 d-i keyboard-configuration/xkb-keymap select us
 
 ### Network (DHCP fallback)
+d-i netcfg/choose_interface select enp62s0
 d-i netcfg/disable_dhcp boolean false
 
 ### Mirror & packages
 d-i mirror/country string manual
 d-i mirror/http/hostname string deb.debian.org
 tasksel tasksel/first multiselect standard, ssh-server
-d-i pkgsel/include string git ansible nfs-common ufw network-manager
+d-i pkgsel/include string git nfs-common network-manager
 
-### Disk (LVM, no swap)
-d-i partman-auto/method string lvm
-d-i partman-auto/expert_recipe string                         \
-  root :: 1 1 100% ext4                             \
-    $primary{ } $bootable{ } method{ format } format{ } \
-    use_filesystem{ } filesystem{ ext4 } mountpoint{ / }
-d-i partman-swapfile/size string 0
+######  ─── Partitioning ──────────────────────────────────────────
+
+### dual-disk layout  (sda: EFI+swap+/ ,  sdb: /var /usr /home) ###############
+
+d-i partman-auto/disk            string /dev/sda /dev/sdb
+d-i partman-auto/method          string regular
+d-i partman-auto/choose_recipe   select dual-disk
+
+d-i partman-auto/expert_recipe string \
+  dual-disk :: \
+    # =====  /dev/sda  =====                               \
+    512 512 512 fat32                                      \
+        $primary{ } $bootable{ }                          \
+        method{ efi } format{ }                           \
+        mountpoint{ /boot/efi }                           \
+    .                                                      \
+    4096 4096 4096 linux-swap                              \
+        $primary{ }                                       \
+        method{ swap } format{ }                          \
+    .                                                      \
+    20480 40000 -1 ext4                                    \
+        $primary{ }                                       \
+        method{ format } format{ }                        \
+        use_filesystem{ } filesystem{ ext4 }              \
+        mountpoint{ / }                                   \
+    .                                                      \
+    # =====  /dev/sdb  =====                               \
+    10240 10240 10240 ext4                                 \
+        device{ /dev/sdb }                                \
+        method{ format } format{ }                        \
+        use_filesystem{ } filesystem{ ext4 }              \
+        mountpoint{ /var }                                \
+    .                                                      \
+    20480 20480 40960 ext4                                 \
+        device{ /dev/sdb }                                \
+        method{ format } format{ }                        \
+        use_filesystem{ } filesystem{ ext4 }              \
+        mountpoint{ /usr }                                \
+    .                                                      \
+    10240 10240 -1 ext4                                    \
+        device{ /dev/sdb }                                \
+        method{ format } format{ }                        \
+        use_filesystem{ } filesystem{ ext4 }              \
+        mountpoint{ /home }                               \
+    .
+
+# Skip the confirmation questions
 d-i partman/confirm_write_new_label boolean true
-d-i partman/choose_partition select finish
-d-i partman/confirm boolean true
-d-i partman/confirm_nooverwrite boolean true
+d-i partman/choose_partition         select finish
+d-i partman/confirm                  boolean true
+###############################################################################
+
 
 ### Users
 d-i passwd/root-login boolean false
@@ -33,6 +75,22 @@ d-i passwd/user-password-crypted password $6$QwaUvH7Q06s3MDDW$RAsEmYo7giqbcuJnLf
 
 ### Late-command: install ansible-pull and fetch vault pass
 d-i preseed/late_command string \
-  in-target sh -c "cat >/etc/systemd/system/ansible-pull.service <<'EOF'\n[Unit]\nDescription=Pull and apply homelab playbook\nAfter=network-online.target\nWants=network-online.target\n\n[Service]\nType=oneshot\nEnvironment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass\nExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git \\n -i ansible/inventory/hosts.ini ansible/playbooks/debian_linux.yml ansible/playbooks/msi_laptop.yml ansible/playbooks/k3s_controller.yml\n\n[Install]\nWantedBy=multi-user.target\nEOF" && \
-  in-target sh -c "wget -qO /root/.vault-pass https://vault.christagliaferro.com/vaultpass && chmod 600 /root/.vault-pass" && \
-  in-target systemctl daemon-reload && in-target systemctl enable ansible-pull.service
+  in-target wget -qO /root/.vault-pass https://vault.christagliaferro.com/vaultpass ; \
+  in-target chmod 600 /root/.vault-pass ; \
+  in-target apt-get update && apt-get upgrade -y
+  in-target bash -c 'cat >/etc/systemd/system/ansible-pull.service << "EOF"
+[Unit]
+Description=Pull and apply homelab playbook
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass
+ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git \
+  -i ansible/inventory/hosts.ini ansible/playbooks/combined-msicontroller.yml
+[Install]
+WantedBy=multi-user.target
+EOF' ; \
+  in-target systemctl daemon-reload ; \
+  in-target systemctl enable ansible-pull.service

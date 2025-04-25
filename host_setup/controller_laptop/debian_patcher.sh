@@ -66,10 +66,13 @@ mkdir "$WORK_DIR"
 # 3. Replace isolinux/isolinux.cfg
 cp "$THIS_DIR/isolinux/isolinux.cfg" "$WORK_DIR/isolinux/isolinux.cfg"
 
-# 4. Copy preseed folder
+# 4. Replace grub/boot/grub.cfg
+cp "$THIS_DIR/grub/boot/grub.cfg" "$WORK_DIR/grub/boot/grub.cfg"
+
+# 5. Copy preseed folder
 cp -r "$THIS_DIR/preseed" "$WORK_DIR/"
 
-# 5. Rebuild ISO
+# 6. Rebuild ISO
 mkisofs -o "$OUTPUT_ISO" \
   -b isolinux/isolinux.bin \
   -c isolinux/boot.cat \
