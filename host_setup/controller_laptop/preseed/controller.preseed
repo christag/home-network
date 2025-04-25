@@ -90,10 +90,10 @@ d-i preseed/late_command string \
     '[Service]' \
     'Type=oneshot' \
     'Environment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass' \
-    'ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git -i ansible/inventory/hosts.ini site.yml' \
+    'ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git -i ansible/inventory/hosts.ini ansible/playbooks/combined-msicontroller.yml' \
     '' \
     '[Install]' \
-    'WantedBy=multi-user.target' \
+    'Alias=multi-user.target.wants/ansible-pull.service' \
     > /etc/systemd/system/ansible-pull.service" \; \
   in-target systemctl daemon-reload \; \
   in-target systemctl enable ansible-pull.service
