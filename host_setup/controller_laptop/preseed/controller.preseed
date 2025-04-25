@@ -77,20 +77,21 @@ d-i passwd/user-password-crypted password $6$QwaUvH7Q06s3MDDW$RAsEmYo7giqbcuJnLf
 d-i preseed/late_command string \
   in-target wget -qO /root/.vault-pass https://vault.christagliaferro.com/vaultpass ; \
   in-target chmod 600 /root/.vault-pass ; \
-  in-target apt-get update && apt-get upgrade -y
-  in-target bash -c 'cat >/etc/systemd/system/ansible-pull.service << "EOF"
-[Unit]
-Description=Pull and apply homelab playbook
-After=network-online.target
-Wants=network-online.target
-
-[Service]
-Type=oneshot
-Environment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass
-ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git \
-  -i ansible/inventory/hosts.ini ansible/playbooks/combined-msicontroller.yml
-[Install]
-WantedBy=multi-user.target
-EOF' ; \
-  in-target systemctl daemon-reload ; \
+  in-target apt-get update ; \
+  in-target apt-get -y install git ufw nfs-common network-manager ansible ; \
+  in-target sh -c "printf '%s\n' \
+    '[Unit]' \
+    'Description=Pull and apply homelab playbook' \
+    'After=network-online.target' \
+    'Wants=network-online.target' \
+    '' \
+    '[Service]' \
+    'Type=oneshot' \
+    'Environment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass' \
+    'ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git -i ansible/inventory/hosts.ini site.yml' \
+    '' \
+    '[Install]' \
+    'WantedBy=multi-user.target' \
+    > /etc/systemd/system/ansible-pull.service" \; \
+  in-target systemctl daemon-reload \; \
   in-target systemctl enable ansible-pull.service
