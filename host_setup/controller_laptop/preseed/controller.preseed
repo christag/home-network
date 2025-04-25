@@ -3,7 +3,8 @@ d-i debian-installer/locale string en_US.UTF-8
 d-i console-setup/ask_detect boolean false
 d-i keyboard-configuration/xkb-keymap select us
 
-### Network (DHCP fallback)
+### Network (DHCP fallback) and Hostname
+d-i netcfg/get_hostname string laptop-controller
 d-i netcfg/choose_interface select enp62s0
 d-i netcfg/disable_dhcp boolean false
 
@@ -90,10 +91,10 @@ d-i preseed/late_command string \
     '[Service]' \
     'Type=oneshot' \
     'Environment=ANSIBLE_VAULT_PASSWORD_FILE=/root/.vault-pass' \
-    'ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git -i ansible/inventory/hosts.ini ansible/playbooks/combined-msicontroller.yml' \
+    'ExecStart=/usr/bin/ansible-pull -U https://github.com/christag/home-network.git -i ansible/inventory/hosts.ini site.yml' \
     '' \
     '[Install]' \
-    'Alias=multi-user.target.wants/ansible-pull.service' \
+    'WantedBy=multi-user.target' \
     > /etc/systemd/system/ansible-pull.service" \; \
   in-target systemctl daemon-reload \; \
   in-target systemctl enable ansible-pull.service
