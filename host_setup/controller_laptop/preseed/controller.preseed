@@ -77,6 +77,8 @@ d-i passwd/user-password-crypted password $6$QwaUvH7Q06s3MDDW$RAsEmYo7giqbcuJnLf
 d-i preseed/late_command string \
   in-target wget -qO /root/.vault-pass https://vault.christagliaferro.com/vaultpass ; \
   in-target chmod 600 /root/.vault-pass ; \
+  in-target sed -i '/cdrom:/d' /etc/apt/sources.list ; \
+  in-target sh -c 'echo "deb http://deb.debian.org/debian bookworm main contrib non-free-firmware" >> /etc/apt/sources.list' ; \
   in-target apt-get update ; \
   in-target apt-get -y install git ufw nfs-common network-manager ansible ; \
   in-target sh -c "printf '%s\n' \
@@ -95,3 +97,8 @@ d-i preseed/late_command string \
     > /etc/systemd/system/ansible-pull.service" \; \
   in-target systemctl daemon-reload \; \
   in-target systemctl enable ansible-pull.service
+
+### Automatically reboot when done
+d-i finish-install/reboot_in_progress note
+d-i debian-installer/exit/halt boolean false
+d-i debian-installer/exit/poweroff boolean false
